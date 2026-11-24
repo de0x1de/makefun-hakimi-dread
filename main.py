@@ -36,12 +36,30 @@ def validate(text: str) -> None:
         raise ValueError("entry must be a single line")
     if len(text) > MAX_CHARACTERS:
         raise ValueError(f"entry is {len(text)} characters, over {MAX_CHARACTERS}")
+    # The 140-character gate is a hard ceiling, not a target: reject
+    # entries that only pass because of hidden padding or collapsing.
+    if "  " in text:
+        raise ValueError("entry must use single spaces between words")
+    if "\t" in text:
+        raise ValueError("entry must not contain tab characters")
     if text != text.strip():
         raise ValueError("entry has leading or trailing whitespace")
     if not text.startswith(APPROVAL):
         raise ValueError("entry must open with the approval")
     if "stardust" not in text:
         raise ValueError("entry is missing its deep-time image")
+    # Every rhetorical part must survive assembly verbatim and in
+    # order; a missing or reordered part changes the line's meaning.
+    position = 0
+    for part in PARTS:
+        if not part.strip():
+            raise ValueError("entry part must not be empty")
+        found = text.find(part, position)
+        if found < 0:
+            raise ValueError(f"entry is missing required phrase: {part!r}")
+        position = found + len(part)
+    if not text.endswith(TODAY):
+        raise ValueError("entry must close with today's concrete fact")
     if not text.endswith("."):
         raise ValueError("entry must end with a period")
     # The gate counts characters of UTF-8 text; confirm the text
